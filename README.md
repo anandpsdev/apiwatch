@@ -77,7 +77,7 @@ func main() {
 		watch.GinMiddleware(),
 	)
 
-	// Mount the dashboard and REST API at /_trace
+	// Mount the dashboard and REST API at /apiwatch
 	watch.MountGin(router, "/apiwatch")
 
 	router.GET("/api/users", func(c *gin.Context) {

@@ -1,446 +1,1355 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>APIWatch — Runtime API Traffic Inspector</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235eb8ff'/%3E%3Cstop offset='1' stop-color='%23818cf8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M5 16h5l3-8 5 16 3-8h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('apiwatch-theme');
+        if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { }
+    })();
+  </script>
   <style>
     :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --hover-bg: #273548;
-      --active-bg: #334155;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #38bdf8;
-      --primary-hover: #0284c7;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --info: #6366f1;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, monospace;
+      --bg: #0b1020;
+      --surface: #131a2e;
+      --surface-2: #182038;
+      --surface-3: #1e2742;
+      --border: #263050;
+      --border-soft: #1f2842;
+      --text: #e8ecf8;
+      --text-2: #a3aed0;
+      --text-3: #6b7699;
+      --primary: #5eb8ff;
+      --primary-strong: #2f9bf5;
+      --primary-soft: rgba(94, 184, 255, .14);
+      --success: #34d399;
+      --info: #818cf8;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --code-bg: #0a0f1d;
+      --shadow: 0 12px 40px rgba(0, 0, 0, .45);
+      --radius: 12px;
+      --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+      --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color-scheme: dark
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root[data-theme="light"] {
+      --bg: #f4f6fb;
+      --surface: #fff;
+      --surface-2: #f8f9fd;
+      --surface-3: #eef1f9;
+      --border: #dde2f0;
+      --border-soft: #e8ebf5;
+      --text: #151b33;
+      --text-2: #4a5578;
+      --text-3: #8089a8;
+      --primary: #0b7bd6;
+      --primary-strong: #0a68b5;
+      --primary-soft: rgba(11, 123, 214, .1);
+      --success: #059669;
+      --info: #4f46e5;
+      --warning: #b45309;
+      --danger: #dc2626;
+      --code-bg: #f6f8fd;
+      --shadow: 0 12px 40px rgba(30, 40, 90, .16);
+      color-scheme: light
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--sans);
       font-size: 13px;
       line-height: 1.5;
-      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased
     }
-    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
-    
-    /* Header */
+
+    code,
+    pre {
+      font-family: var(--mono);
+      font-size: 12px
+    }
+
+    button {
+      font-family: inherit
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background-clip: content-box
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-3);
+      background-clip: content-box;
+      border: 2px solid transparent
+    }
+
     header {
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--card-border);
-      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 14px 24px;
+      gap: 16px;
+      flex-shrink: 0
     }
+
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0
     }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--primary), var(--info));
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(94, 140, 255, .35)
+    }
+
     .brand h1 {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
-      letter-spacing: -0.5px;
-      color: #38bdf8;
+      letter-spacing: -.02em;
+      line-height: 1.1
     }
+
     .brand .subtitle {
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 400;
-      border-left: 1px solid var(--card-border);
-      padding-left: 12px;
+      color: var(--text-3);
+      font-size: 12px
     }
-    .status-badge {
+
+    .header-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      background: #0f172a;
-      border: 1px solid var(--card-border);
+      gap: 8px
     }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2)
+    }
+
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--danger);
+      background: var(--danger)
     }
+
     .status-dot.live {
       background: var(--success);
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+      animation: pulse 2s infinite
     }
 
-    /* Stats Bar */
+    .status-dot.paused {
+      background: var(--warning)
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, .55)
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(52, 211, 153, 0)
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, 0)
+      }
+    }
+
+    .icon-btn,
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--surface);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: background .15s, color .15s, border-color .15s
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px
+    }
+
+    .btn {
+      padding: 0 12px;
+      height: 34px;
+      white-space: nowrap
+    }
+
+    .icon-btn:hover,
+    .btn:hover {
+      background: var(--surface-3);
+      color: var(--text)
+    }
+
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed
+    }
+
+    .btn.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: var(--primary)
+    }
+
+    .btn-danger:hover {
+      background: rgba(248, 113, 113, .12);
+      color: var(--danger);
+      border-color: rgba(248, 113, 113, .5)
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #06121f;
+      border-color: var(--primary);
+      font-weight: 700
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-strong);
+      color: #06121f
+    }
+
+    .badge-count {
+      background: var(--primary);
+      color: #06121f;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0 7px;
+      line-height: 18px
+    }
+
+    svg.i {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0
+    }
+
+    :root[data-theme="dark"] .i-sun {
+      display: block
+    }
+
+    :root[data-theme="dark"] .i-moon {
+      display: none
+    }
+
+    :root[data-theme="light"] .i-sun {
+      display: none
+    }
+
+    :root[data-theme="light"] .i-moon {
+      display: block
+    }
+
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 12px;
-      padding: 16px 24px;
-      background: var(--bg);
+      padding: 4px 24px 16px;
+      flex-shrink: 0
     }
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 10px 16px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .stat-card:hover { background: var(--hover-bg); }
-    .stat-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
-    .stat-val { font-size: 20px; font-weight: 700; margin-top: 2px; }
 
-    /* Toolbar */
-    .toolbar {
-      padding: 0 24px 16px 24px;
+    .stat-card {
+      position: relative;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent, var(--primary)) 9%, var(--surface)), var(--surface) 70%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px 12px;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      transition: transform .15s, border-color .15s, box-shadow .15s
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent, var(--primary));
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent)
+    }
+
+    .stat-card.active {
+      border-color: var(--accent, var(--primary));
+      box-shadow: 0 0 0 1px var(--accent, var(--primary)), 0 8px 24px color-mix(in srgb, var(--accent, var(--primary)) 22%, transparent)
+    }
+
+    .stat-top {
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-2);
+      font-weight: 700
+    }
+
+    .stat-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      color: var(--accent)
+    }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -.03em;
+      margin: 6px 0 2px;
+      color: var(--accent, var(--text));
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      transition: color .2s
+    }
+
+    .stat-card.zero .stat-val {
+      color: var(--text-3)
+    }
+
+    .stat-sub {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-3)
+    }
+
+    .stat-pct {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent)
+    }
+
+    .stat-card.zero .stat-pct {
+      color: var(--text-3)
+    }
+
+    .stat-meter {
+      height: 4px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      margin-top: 10px;
+      overflow: hidden
+    }
+
+    .stat-meter i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width .4s ease
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
       flex-wrap: wrap;
       align-items: center;
+      padding: 0 24px 14px;
+      flex-shrink: 0
     }
-    .search-input {
-      flex: 1;
-      min-width: 200px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 6px;
-      outline: none;
-    }
-    .search-input:focus { border-color: var(--primary); }
-    select, button {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      outline: none;
-    }
-    button:hover { background: var(--hover-bg); }
-    .btn-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
-    .btn-danger:hover { background: rgba(239, 68, 68, 0.15); }
-    .btn-active { background: var(--primary); color: #0f172a; font-weight: 600; border-color: var(--primary); }
 
-    /* Main Container */
-    .main-layout {
-      display: flex;
-      padding: 0 24px 24px 24px;
-      gap: 16px;
-      height: calc(100vh - 210px);
-      min-height: 400px;
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px
     }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      pointer-events: none
+    }
+
+    .search-input {
+      width: 100%;
+      height: 34px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0 40px 0 36px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color .15s, box-shadow .15s
+    }
+
+    .search-input::placeholder {
+      color: var(--text-3)
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft)
+    }
+
+    .kbd {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-3);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0 6px;
+      background: var(--surface-2)
+    }
+
+    select.btn {
+      appearance: none;
+      padding-right: 28px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%238089a8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center
+    }
+
+    .main-layout {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      gap: 16px;
+      padding: 0 24px 24px
+    }
+
     .table-container {
       flex: 1;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      overflow-y: auto;
+      min-width: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       display: flex;
       flex-direction: column;
+      overflow: hidden
     }
+
+    .table-scroll {
+      flex: 1;
+      overflow: auto
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      text-align: left;
+      text-align: left
     }
+
     th {
       position: sticky;
       top: 0;
-      background: #192233;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--card-border);
+      z-index: 2;
+      background: var(--surface-2);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
       font-size: 11px;
       text-transform: uppercase;
-      color: var(--text-muted);
-      z-index: 2;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      font-weight: 600
     }
+
     td {
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+      padding: 9px 16px;
+      border-bottom: 1px solid var(--border-soft);
       white-space: nowrap;
+      vertical-align: middle
     }
+
     tr.trace-row {
       cursor: pointer;
-      transition: background 0.1s;
+      transition: background .1s
     }
-    tr.trace-row:hover { background: var(--hover-bg); }
-    tr.trace-row.selected { background: var(--active-bg); }
 
-    /* Method Badges */
+    tr.trace-row:hover {
+      background: var(--surface-2)
+    }
+
+    tr.trace-row.selected {
+      background: var(--primary-soft);
+      box-shadow: inset 3px 0 0 var(--primary)
+    }
+
+    tr.trace-row.flash {
+      animation: flash 1.2s ease-out
+    }
+
+    @keyframes flash {
+      from {
+        background: var(--primary-soft)
+      }
+
+      to {
+        background: transparent
+      }
+    }
+
+    .endpoint {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      font-weight: 500;
+      max-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    td.endpoint-cell {
+      width: 100%
+    }
+
+    .endpoint-sub {
+      display: block;
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 400;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
     .badge {
+      display: inline-block;
+      min-width: 58px;
+      text-align: center;
+      font-family: var(--mono);
       font-size: 11px;
       font-weight: 700;
       padding: 3px 8px;
-      border-radius: 4px;
-      display: inline-block;
-      text-align: center;
-    }
-    .badge-get { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-    .badge-post { background: rgba(52, 211, 153, 0.15); color: #34d399; }
-    .badge-put { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
-    .badge-patch { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
-    .badge-delete { background: rgba(248, 113, 113, 0.15); color: #f87171; }
-    
-    .status-2xx { color: var(--success); font-weight: 600; }
-    .status-3xx { color: var(--info); font-weight: 600; }
-    .status-4xx { color: var(--warning); font-weight: 600; }
-    .status-5xx { color: var(--danger); font-weight: 600; }
-    
-    .slow-tag {
-      background: rgba(245, 158, 11, 0.18);
-      color: #fbbf24;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 6px;
-      font-weight: 600;
-    }
-
-    /* Detail Drawer / Panel */
-    .detail-panel {
-      width: 480px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .detail-panel.open { display: flex; }
-    .detail-header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--card-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #192233;
-    }
-    .detail-tabs {
-      display: flex;
-      border-bottom: 1px solid var(--card-border);
-      background: #141c2c;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 10px;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      border-radius: 0;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-      background: rgba(56, 189, 248, 0.05);
-    }
-    .detail-body {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-    }
-    .detail-section {
-      margin-bottom: 16px;
-    }
-    .detail-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-    .kv-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 8px;
-    }
-    .kv-table td {
-      padding: 6px 8px;
-      font-size: 12px;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
-    }
-    .kv-key { color: var(--text-muted); width: 35%; font-weight: 500; }
-    .kv-val { color: var(--text); word-break: break-all; }
-    .code-box {
-      background: #0b1120;
-      border: 1px solid var(--card-border);
       border-radius: 6px;
-      padding: 10px;
-      max-height: 350px;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .redacted { color: #f43f5e; font-weight: 600; }
-    .tag-trunc {
-      display: inline-block;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(239, 68, 68, 0.2);
-      color: #f87171;
-      margin-left: 8px;
+      letter-spacing: .02em
     }
 
-    /* Pagination */
+    .badge-get {
+      background: rgba(56, 189, 248, .15);
+      color: #38bdf8
+    }
+
+    .badge-post {
+      background: rgba(52, 211, 153, .15);
+      color: #34d399
+    }
+
+    .badge-put {
+      background: rgba(251, 191, 36, .15);
+      color: #fbbf24
+    }
+
+    .badge-patch {
+      background: rgba(167, 139, 250, .16);
+      color: #a78bfa
+    }
+
+    .badge-delete {
+      background: rgba(248, 113, 113, .16);
+      color: #f87171
+    }
+
+    .badge-other {
+      background: var(--surface-3);
+      color: var(--text-2)
+    }
+
+    :root[data-theme="light"] .badge-get {
+      color: #0369a1
+    }
+
+    :root[data-theme="light"] .badge-post {
+      color: #047857
+    }
+
+    :root[data-theme="light"] .badge-put {
+      color: #b45309
+    }
+
+    :root[data-theme="light"] .badge-patch {
+      color: #6d28d9
+    }
+
+    :root[data-theme="light"] .badge-delete {
+      color: #b91c1c
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--c) 14%, transparent);
+      color: var(--c)
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--c)
+    }
+
+    .s-2xx {
+      --c: var(--success)
+    }
+
+    .s-3xx {
+      --c: var(--info)
+    }
+
+    .s-4xx {
+      --c: var(--warning)
+    }
+
+    .s-5xx {
+      --c: var(--danger)
+    }
+
+    .s-0 {
+      --c: var(--text-3)
+    }
+
+    .dur {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums
+    }
+
+    .dur-text {
+      min-width: 64px
+    }
+
+    .slow-tag {
+      background: rgba(251, 191, 36, .16);
+      color: var(--warning);
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: .04em
+    }
+
+    .muted {
+      color: var(--text-3)
+    }
+
+    .empty-state {
+      padding: 72px 24px;
+      text-align: center;
+      color: var(--text-3)
+    }
+
+    .empty-state svg {
+      width: 40px;
+      height: 40px;
+      stroke-width: 1.5;
+      margin-bottom: 12px;
+      opacity: .6
+    }
+
+    .empty-state strong {
+      display: block;
+      color: var(--text-2);
+      font-size: 14px;
+      margin-bottom: 4px
+    }
+
     .pagination {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 8px 14px;
-      border-top: 1px solid var(--card-border);
-      background: #192233;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2)
     }
-    .empty-state {
-      padding: 48px;
-      text-align: center;
-      color: var(--text-muted);
+
+    /* Detail panel */
+    .detail-panel {
+      width: 520px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: none;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .detail-panel.open {
+      display: flex;
+      animation: slideIn .2s ease-out
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .detail-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px
+    }
+
+    .detail-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0
+    }
+
+    .detail-path {
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 13px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap
+    }
+
+    .detail-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 8px
+    }
+
+    .tab-btn {
+      padding: 11px 14px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-3);
+      font-weight: 600;
+      font-size: 12.5px;
+      cursor: pointer;
+      margin-bottom: -1px
+    }
+
+    .tab-btn:hover {
+      color: var(--text)
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary)
+    }
+
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px
+    }
+
+    .detail-section {
+      margin-bottom: 20px
+    }
+
+    .detail-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      margin-bottom: 8px;
+      font-weight: 600
+    }
+
+    .detail-title .btn {
+      height: 24px;
+      font-size: 11px;
+      padding: 0 8px;
+      text-transform: none;
+      letter-spacing: 0
+    }
+
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .kv-table td {
+      padding: 7px 10px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border-soft);
+      white-space: normal;
+      vertical-align: top
+    }
+
+    .kv-table tr:last-child td {
+      border-bottom: none
+    }
+
+    .kv-table tr:nth-child(odd) {
+      background: var(--surface-2)
+    }
+
+    .kv-key {
+      color: var(--text-3);
+      width: 34%;
+      font-weight: 500
+    }
+
+    .kv-val {
+      color: var(--text);
+      word-break: break-all;
+      font-family: var(--mono);
+      font-size: 11.5px
+    }
+
+    .none-text {
+      color: var(--text-3);
+      font-size: 12px
+    }
+
+    .code-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 420px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6
+    }
+
+    .j-key {
+      color: var(--primary)
+    }
+
+    .j-str {
+      color: var(--success)
+    }
+
+    .j-num {
+      color: var(--warning)
+    }
+
+    .j-bool {
+      color: var(--info)
+    }
+
+    .j-null {
+      color: var(--text-3)
+    }
+
+    :root[data-theme="light"] .j-str {
+      color: #047857
+    }
+
+    .redacted {
+      color: var(--danger);
+      font-weight: 600
+    }
+
+    .tag-trunc {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 4px;
+      margin-left: 8px;
+      background: rgba(248, 113, 113, .16);
+      color: var(--danger);
+      font-weight: 700;
+      letter-spacing: .04em
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(5, 8, 18, .6);
+      backdrop-filter: blur(3px)
+    }
+
+    .modal-backdrop[hidden] {
+      display: none
+    }
+
+    .modal {
+      width: min(720px, 100%);
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      animation: pop .15s ease-out
+    }
+
+    @keyframes pop {
+      from {
+        opacity: 0;
+        transform: scale(.97) translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .modal-header,
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px
+    }
+
+    .modal-header {
+      border-bottom: 1px solid var(--border)
+    }
+
+    .modal-header h2 {
+      font-size: 14px;
+      font-weight: 700
+    }
+
+    .modal-footer {
+      border-top: 1px solid var(--border);
+      justify-content: flex-end;
+      gap: 8px
+    }
+
+    .modal-body {
+      padding: 16px;
+      overflow: auto
+    }
+
+    .modal-body .code-box {
+      max-height: 50vh;
+      user-select: all
+    }
+
+    .modal.modal-sm {
+      width: min(420px, 100%)
+    }
+
+    .confirm-body {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start
+    }
+
+    .confirm-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      background: rgba(248, 113, 113, .14);
+      color: var(--danger)
+    }
+
+    .confirm-icon svg {
+      width: 18px;
+      height: 18px
+    }
+
+    .confirm-body h2 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px
+    }
+
+    .confirm-body p {
+      color: var(--text-2);
+      font-size: 12.5px
+    }
+
+    .btn-solid-danger {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+      font-weight: 700
+    }
+
+    .btn-solid-danger:hover {
+      background: var(--danger);
+      color: #fff;
+      filter: brightness(1.1)
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translate(-50%, 20px);
+      background: var(--text);
+      color: var(--bg);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      box-shadow: var(--shadow);
+      z-index: 200
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0)
+    }
+
+    @media (max-width:1200px) {
+      .stats-bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+      }
+
+      .detail-panel {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        bottom: 12px;
+        width: min(560px, calc(100vw - 24px));
+        box-shadow: var(--shadow);
+        z-index: 20
+      }
+    }
+
+    @media (max-width:720px) {
+
+      header,
+      .stats-bar,
+      .toolbar,
+      .main-layout {
+        padding-left: 14px;
+        padding-right: 14px
+      }
+
+      .brand .subtitle {
+        display: none
+      }
+
+      .col-time {
+        display: none
+      }
+
+      .stat-val {
+        font-size: 22px
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
+      }
     }
   </style>
 </head>
+
 <body>
 
   <header>
     <div class="brand">
-      <h1>APIWatch</h1>
-      <span class="subtitle">Runtime API Traffic Inspector</span>
+      <div class="logo" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px">
+          <path d="M3 12h4l3-8 4 16 3-8h4" />
+        </svg></div>
+      <div>
+        <h1>APIWatch</h1>
+        <div class="subtitle">Runtime API Traffic Inspector</div>
+      </div>
     </div>
-    <div class="status-badge">
-      <div id="statusDot" class="status-dot"></div>
-      <span id="statusText">Connecting...</span>
+    <div class="header-actions">
+      <div class="status-badge" role="status">
+        <div id="statusDot" class="status-dot"></div><span id="statusText">Connecting…</span>
+      </div>
+      <button class="btn" id="pauseBtn" title="Pause / resume live updates">
+        <svg class="i" viewBox="0 0 24 24" id="pauseIcon">
+          <rect x="6" y="5" width="4" height="14" rx="1" />
+          <rect x="14" y="5" width="4" height="14" rx="1" />
+        </svg>
+        <span id="pauseLabel">Pause</span>
+        <span class="badge-count" id="pendingBadge" style="display:none">0</span>
+      </button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="i i-sun" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+        <svg class="i i-moon" viewBox="0 0 24 24">
+          <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" />
+        </svg>
+      </button>
     </div>
   </header>
 
-  <div class="stats-bar">
-    <div class="stat-card" onclick="filterByStatus('')">
-      <div class="stat-label">Total</div>
+  <section class="stats-bar" aria-label="Summary">
+    <button class="stat-card" data-status="" style="--accent:var(--primary)">
+      <div class="stat-top"><span class="stat-label">Total</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <path d="M3 12h4l3-8 4 16 3-8h4" />
+          </svg></span></div>
       <div class="stat-val" id="statTotal">0</div>
-    </div>
-    <div class="stat-card" onclick="filterByStatus('2xx')">
-      <div class="stat-label" style="color:#10b981;">2xx</div>
-      <div class="stat-val status-2xx" id="stat2xx">0</div>
-    </div>
-    <div class="stat-card" onclick="filterByStatus('3xx')">
-      <div class="stat-label" style="color:#6366f1;">3xx</div>
-      <div class="stat-val status-3xx" id="stat3xx">0</div>
-    </div>
-    <div class="stat-card" onclick="filterByStatus('4xx')">
-      <div class="stat-label" style="color:#f59e0b;">4xx</div>
-      <div class="stat-val status-4xx" id="stat4xx">0</div>
-    </div>
-    <div class="stat-card" onclick="filterByStatus('5xx')">
-      <div class="stat-label" style="color:#ef4444;">5xx</div>
-      <div class="stat-val status-5xx" id="stat5xx">0</div>
-    </div>
-    <div class="stat-card" onclick="toggleSlowFilter()">
-      <div class="stat-label" style="color:#fbbf24;">Slow</div>
-      <div class="stat-val" style="color:#fbbf24;" id="statSlow">0</div>
-    </div>
-  </div>
+      <div class="stat-sub"><span>All Requests</span></div>
+    </button>
+    <button class="stat-card" data-status="2xx" data-meter style="--accent:var(--success)">
+      <div class="stat-top"><span class="stat-label">2xx</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12l3 3 5-6" />
+          </svg></span></div>
+      <div class="stat-val" id="stat2xx">0</div>
+      <div class="stat-sub"><span>Success</span><span class="stat-pct">0%</span></div>
+      <div class="stat-meter"><i></i></div>
+    </button>
+    <button class="stat-card" data-status="3xx" data-meter style="--accent:var(--info)">
+      <div class="stat-top"><span class="stat-label">3xx</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <path d="M15 4l5 5-5 5" />
+            <path d="M4 20v-6a5 5 0 015-5h11" />
+          </svg></span></div>
+      <div class="stat-val" id="stat3xx">0</div>
+      <div class="stat-sub"><span>Redirect</span><span class="stat-pct">0%</span></div>
+      <div class="stat-meter"><i></i></div>
+    </button>
+    <button class="stat-card" data-status="4xx" data-meter style="--accent:var(--warning)">
+      <div class="stat-top"><span class="stat-label">4xx</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <path d="M12 3l10 18H2z" />
+            <path d="M12 10v5M12 18h.01" />
+          </svg></span></div>
+      <div class="stat-val" id="stat4xx">0</div>
+      <div class="stat-sub"><span>Client error</span><span class="stat-pct">0%</span></div>
+      <div class="stat-meter"><i></i></div>
+    </button>
+    <button class="stat-card" data-status="5xx" data-meter style="--accent:var(--danger)">
+      <div class="stat-top"><span class="stat-label">5xx</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg></span></div>
+      <div class="stat-val" id="stat5xx">0</div>
+      <div class="stat-sub"><span>Server error</span><span class="stat-pct">0%</span></div>
+      <div class="stat-meter"><i></i></div>
+    </button>
+    <button class="stat-card" id="slowCard" data-meter style="--accent:var(--warning)">
+      <div class="stat-top"><span class="stat-label">Slow</span><span class="stat-icon"><svg class="i"
+            viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg></span></div>
+      <div class="stat-val" id="statSlow">0</div>
+      <div class="stat-sub"><span>Over Threshold</span><span class="stat-pct">0%</span></div>
+      <div class="stat-meter"><i></i></div>
+    </button>
+  </section>
 
   <div class="toolbar">
-    <input type="text" id="searchInput" class="search-input" placeholder="Search path, method, URL, or route..." oninput="handleSearch()">
-    
-    <select id="methodFilter" onchange="fetchEntries()">
-      <option value="">All Methods</option>
+    <div class="search-wrap">
+      <svg class="i" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.3-4.3" />
+      </svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search path, method, URL, or route…"
+        autocomplete="off" spellcheck="false">
+      <span class="kbd">/</span>
+    </div>
+    <select id="methodFilter" class="btn" aria-label="Method filter">
+      <option value="">All methods</option>
       <option value="GET">GET</option>
       <option value="POST">POST</option>
       <option value="PUT">PUT</option>
       <option value="PATCH">PATCH</option>
       <option value="DELETE">DELETE</option>
     </select>
-
-    <select id="statusFilter" onchange="fetchEntries()">
-      <option value="">All Statuses</option>
+    <select id="statusFilter" class="btn" aria-label="Status filter">
+      <option value="">All statuses</option>
       <option value="2xx">2xx Success</option>
       <option value="3xx">3xx Redirect</option>
       <option value="4xx">4xx Client Error</option>
       <option value="5xx">5xx Server Error</option>
     </select>
-
-    <button id="slowBtn" onclick="toggleSlowFilter()">Slow Requests</button>
-    <button class="btn-danger" onclick="clearLogs()">Clear</button>
+    <button class="btn" id="slowBtn"><svg class="i" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>Slow only</button>
+    <button class="btn btn-danger" id="clearBtn"><svg class="i" viewBox="0 0 24 24">
+        <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+      </svg>Clear</button>
   </div>
 
   <div class="main-layout">
     <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:90px;">Method</th>
-            <th>Endpoint</th>
-            <th style="width:90px;">Status</th>
-            <th style="width:110px;">Duration</th>
-            <th style="width:140px;">Time</th>
-          </tr>
-        </thead>
-        <tbody id="traceTableBody">
-          <tr><td colspan="5" class="empty-state">No traces captured yet. Send requests to observe traffic.</td></tr>
-        </tbody>
-      </table>
-
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:96px">Method</th>
+              <th>Endpoint</th>
+              <th style="width:100px">Status</th>
+              <th style="width:140px">Duration</th>
+              <th class="col-time" style="width:120px">Time</th>
+            </tr>
+          </thead>
+          <tbody id="traceTableBody"></tbody>
+        </table>
+      </div>
       <div class="pagination">
-        <span id="pageInfo" style="color:var(--text-muted);">Showing 0-0 of 0</span>
-        <div style="display:flex; gap:8px;">
-          <button id="prevBtn" onclick="changePage(-1)" disabled>Previous</button>
-          <button id="nextBtn" onclick="changePage(1)" disabled>Next</button>
+        <span id="pageInfo" class="muted">Showing 0–0 of 0</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="prevBtn" disabled>&lt;</button>
+          <button class="btn" id="nextBtn" disabled>&gt;</button>
         </div>
       </div>
     </div>
 
-    <!-- Detail Drawer Panel -->
-    <div id="detailPanel" class="detail-panel">
+    <aside id="detailPanel" class="detail-panel" aria-label="Request details">
       <div class="detail-header">
-        <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
-          <span id="dMethod" class="badge"></span>
-          <span id="dPath" style="font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"></span>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button id="curlBtn" onclick="copyCurl()" title="Copy as cURL" style="padding:4px 8px; font-size:11px;">Copy cURL</button>
-          <button onclick="closeDetail()" style="padding:4px 8px; font-size:11px;">✕</button>
+        <div class="detail-title-row"><span id="dMethod" class="badge"></span><span id="dPath"
+            class="detail-path"></span></div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn" id="curlBtn" title="Show as cURL">
+            <svg class="i" viewBox="0 0 24 24">
+              <path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14" />
+            </svg>cURL
+          </button>
+          <button class="icon-btn" id="closeBtn" title="Close (Esc)" aria-label="Close"><svg class="i"
+              viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg></button>
         </div>
       </div>
-
-      <div class="detail-tabs">
-        <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
-        <button class="tab-btn" onclick="switchTab('request')">Request</button>
-        <button class="tab-btn" onclick="switchTab('response')">Response</button>
+      <div class="detail-tabs" role="tablist">
+        <button class="tab-btn active" data-tab="overview" role="tab">Overview</button>
+        <button class="tab-btn" data-tab="request" role="tab">Request</button>
+        <button class="tab-btn" data-tab="response" role="tab">Response</button>
       </div>
-
       <div class="detail-body">
-        <!-- Overview Tab -->
         <div id="tabOverview">
           <div class="detail-section">
             <div class="detail-title">Request Information</div>
             <table class="kv-table">
-              <tr><td class="kv-key">Method</td><td id="oMethod" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Status</td><td id="oStatus" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Route</td><td id="oRoute" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Full URL</td><td id="oURL" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Duration</td><td id="oDuration" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Timestamp</td><td id="oTime" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Request ID</td><td id="oReqID" class="kv-val"></td></tr>
-              <tr><td class="kv-key">Trace ID</td><td id="oTraceID" class="kv-val"></td></tr>
+              <tr>
+                <td class="kv-key">Method</td>
+                <td id="oMethod" class="kv-val"></td>
+              </tr>
+              <tr>
+                <td class="kv-key">Status</td>
+                <td id="oStatus" class="kv-val"></td>
+              </tr>
+              <tr>
+                <td class="kv-key">Route</td>
+                <td id="oRoute" class="kv-val"></td>
+              </tr>
+              <tr>
+                <td class="kv-key">Full URL</td>
+                <td id="oURL" class="kv-val"></td>
+              </tr>
+              <tr>
+                <td class="kv-key">Duration</td>
+                <td id="oDuration" class="kv-val"></td>
+              </tr>
+              <tr>
+                <td class="kv-key">Timestamp</td>
+                <td id="oTime" class="kv-val"></td>
+              </tr>
             </table>
           </div>
         </div>
-
-        <!-- Request Tab -->
-        <div id="tabRequest" style="display:none;">
+        <div id="tabRequest" style="display:none">
           <div class="detail-section">
             <div class="detail-title">Headers</div>
             <div id="reqHeaders"></div>
@@ -450,86 +1359,137 @@
             <div id="reqQuery"></div>
           </div>
           <div class="detail-section">
-            <div class="detail-title" style="display:flex; align-items:center;">
-              Body
-              <span id="reqTruncTag" class="tag-trunc" style="display:none;">TRUNCATED</span>
+            <div class="detail-title"><span>Body <span id="reqTruncTag" class="tag-trunc"
+                  style="display:none">TRUNCATED</span></span><button class="btn" data-copy="reqBody">Copy</button>
             </div>
             <pre class="code-box"><code id="reqBody"></code></pre>
           </div>
         </div>
-
-        <!-- Response Tab -->
-        <div id="tabResponse" style="display:none;">
+        <div id="tabResponse" style="display:none">
           <div class="detail-section">
             <div class="detail-title">Headers</div>
             <div id="resHeaders"></div>
           </div>
           <div class="detail-section">
-            <div class="detail-title" style="display:flex; align-items:center;">
-              Body
-              <span id="resTruncTag" class="tag-trunc" style="display:none;">TRUNCATED</span>
+            <div class="detail-title"><span>Body <span id="resTruncTag" class="tag-trunc"
+                  style="display:none">TRUNCATED</span></span><button class="btn" data-copy="resBody">Copy</button>
             </div>
             <pre class="code-box"><code id="resBody"></code></pre>
           </div>
         </div>
       </div>
+    </aside>
+  </div>
+
+  <div class="modal-backdrop" id="curlModal" role="dialog" aria-modal="true" aria-labelledby="curlTitle" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="curlTitle">cURL command</h2>
+        <button class="icon-btn" id="curlClose" aria-label="Close"><svg class="i" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg></button>
+      </div>
+      <div class="modal-body">
+        <pre class="code-box"><code id="curlText"></code></pre>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="curlCancel">Close</button>
+        <button class="btn btn-primary" id="curlCopy">
+          <svg class="i" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="11" height="11" rx="2" />
+            <path d="M5 15V6a2 2 0 012-2h9" />
+          </svg><span>Copy</span>
+        </button>
+      </div>
     </div>
   </div>
 
+  <div class="modal-backdrop" id="clearModal" role="alertdialog" aria-modal="true" aria-labelledby="clearTitle"
+    aria-describedby="clearDesc" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-body confirm-body">
+        <span class="confirm-icon"><svg class="i" viewBox="0 0 24 24">
+            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+          </svg></span>
+        <div>
+          <h2 id="clearTitle">Clear all traces?</h2>
+          <p id="clearDesc">This permanently deletes every stored request. This can't be undone.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="clearCancel">Cancel</button>
+        <button class="btn btn-solid-danger" id="clearConfirm">Clear traces</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
   <script>
     const basePath = window.location.pathname.replace(/\/+$/, '');
-    let allEntries = [];
-    let currentEntry = null;
-    let offset = 0;
+    const $ = (id) => document.getElementById(id);
     const limit = 50;
-    let totalCount = 0;
-    let searchDebounce = null;
-    let slowOnly = false;
+
+    let allEntries = [], currentEntry = null, offset = 0, totalCount = 0;
+    let searchDebounce = null, slowOnly = false, methodFilter = '';
+    let paused = false, pending = 0, toastTimer = null, evtSource = null;
 
     function connectSSE() {
-      const dot = document.getElementById('statusDot');
-      const txt = document.getElementById('statusText');
-      const evtSource = new EventSource(basePath + '/api/events');
-
-      evtSource.onopen = () => {
-        dot.className = 'status-dot live';
-        txt.textContent = 'Live';
-      };
-
+      const dot = $('statusDot'), txt = $('statusText');
+      evtSource = new EventSource(basePath + '/api/events');
+      evtSource.onopen = () => { if (!paused) setLive(); };
       evtSource.onmessage = (e) => {
-        try {
-          const entry = JSON.parse(e.data);
-          updateStatsIncremental(entry);
-          
-          if (offset === 0 && matchesCurrentFilters(entry)) {
-            allEntries.unshift(entry);
-            if (allEntries.length > limit) allEntries.pop();
-            totalCount++;
-            renderTable();
-          }
-        } catch(err) {}
+        let entry;
+        try { entry = JSON.parse(e.data); } catch (err) { return; }
+        if (paused) { pending++; updatePending(); return; }
+        updateStatsIncremental(entry);
+        if (offset === 0 && matchesCurrentFilters(entry)) {
+          allEntries.unshift(entry);
+          if (allEntries.length > limit) allEntries.pop();
+          totalCount++;
+          renderTable(entry.id);
+        }
       };
+      evtSource.onerror = () => { dot.className = 'status-dot'; txt.textContent = 'Disconnected'; };
+    }
 
-      evtSource.onerror = () => {
-        dot.className = 'status-dot';
-        txt.textContent = 'Disconnected';
-      };
+    function setLive() {
+      $('statusDot').className = 'status-dot live';
+      $('statusText').textContent = 'Live';
+    }
+
+    function togglePause() {
+      paused = !paused;
+      if (paused) {
+        $('statusDot').className = 'status-dot paused';
+        $('statusText').textContent = 'Paused';
+        $('pauseLabel').textContent = 'Resume';
+        $('pauseIcon').innerHTML = '<path d="M6 4l14 8-14 8z"/>';
+      } else {
+        $('pauseLabel').textContent = 'Pause';
+        $('pauseIcon').innerHTML = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>';
+        setLive();
+        pending = 0;
+        updatePending();
+        offset = 0;
+        fetchEntries();
+      }
+    }
+
+    function updatePending() {
+      const b = $('pendingBadge');
+      b.style.display = pending > 0 ? 'inline-block' : 'none';
+      b.textContent = pending > 99 ? '99+' : pending;
     }
 
     function matchesCurrentFilters(e) {
-      const m = document.getElementById('methodFilter').value;
-      if (m && e.method.toUpperCase() !== m.toUpperCase()) return false;
-      const st = document.getElementById('statusFilter').value;
+      if (methodFilter && e.method.toUpperCase() !== methodFilter) return false;
+      const st = $('statusFilter').value;
       if (st && getStatusClass(e.status_code) !== st) return false;
       if (slowOnly && !e.slow) return false;
-      const q = document.getElementById('searchInput').value.trim().toLowerCase();
-      if (q) {
-        if (!e.path.toLowerCase().includes(q) &&
-            !e.method.toLowerCase().includes(q) &&
-            !(e.route && e.route.toLowerCase().includes(q))) {
-          return false;
-        }
-      }
+      const q = $('searchInput').value.trim().toLowerCase();
+      if (q && !(e.path || '').toLowerCase().includes(q) && !(e.method || '').toLowerCase().includes(q) &&
+        !(e.url || '').toLowerCase().includes(q) && !(e.route && e.route.toLowerCase().includes(q))) return false;
       return true;
     }
 
@@ -541,22 +1501,28 @@
       return '';
     }
 
+    function syncFilterUI() {
+      const st = $('statusFilter').value;
+      document.querySelectorAll('.stat-card[data-status]').forEach(c => {
+        c.classList.toggle('active', c.dataset.status === st && (st !== '' || (!slowOnly && !methodFilter && !$('searchInput').value)));
+      });
+      $('slowCard').classList.toggle('active', slowOnly);
+      $('slowBtn').classList.toggle('active', slowOnly);
+      $('methodFilter').value = methodFilter;
+    }
+
+    /* ---------- Data ---------- */
     async function fetchEntries() {
       const params = new URLSearchParams();
       params.set('limit', limit);
       params.set('offset', offset);
-
-      const m = document.getElementById('methodFilter').value;
-      if (m) params.set('method', m);
-
-      const st = document.getElementById('statusFilter').value;
+      if (methodFilter) params.set('method', methodFilter);
+      const st = $('statusFilter').value;
       if (st) params.set('status_class', st);
-
       if (slowOnly) params.set('slow', 'true');
-
-      const q = document.getElementById('searchInput').value.trim();
+      const q = $('searchInput').value.trim();
       if (q) params.set('search', q);
-
+      syncFilterUI();
       try {
         const res = await fetch(`${basePath}/api/entries?${params.toString()}`);
         if (!res.ok) return;
@@ -565,57 +1531,57 @@
         totalCount = data.total || 0;
         renderTable();
         computeStats(allEntries);
-      } catch (err) {
-        console.error('Fetch error:', err);
-      }
+      } catch (err) { console.error('Fetch error:', err); }
     }
 
-    function renderTable() {
-      const tbody = document.getElementById('traceTableBody');
+    function methodClass(m) {
+      const k = (m || '').toLowerCase();
+      return ['get', 'post', 'put', 'patch', 'delete'].includes(k) ? `badge-${k}` : 'badge-other';
+    }
+
+    function renderTable(flashId) {
+      const tbody = $('traceTableBody');
       if (allEntries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No matching traces found.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">
+      <svg class="i" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+      <strong>No traces to show</strong>
+      Send requests to your API, or adjust the filters above.
+    </div></td></tr>`;
         updatePagination();
         return;
       }
-
       tbody.innerHTML = allEntries.map(e => {
-        const mClass = `badge-${e.method.toLowerCase()}`;
-        const sClass = `status-${getStatusClass(e.status_code)}`;
-        const durationStr = formatDuration(e.duration);
-        const slowBadge = e.slow ? '<span class="slow-tag">SLOW</span>' : '';
-        const timeStr = new Date(e.timestamp).toLocaleTimeString();
-        const displayPath = e.route || e.path;
-
+        const sc = getStatusClass(e.status_code) || '0';
+        const hasRoute = e.route && e.route !== e.path;
+        const classes = ['trace-row'];
+        if (currentEntry && currentEntry.id === e.id) classes.push('selected');
+        if (flashId && flashId === e.id) classes.push('flash');
+        const ts = new Date(e.timestamp);
         return `
-          <tr class="trace-row ${currentEntry && currentEntry.id === e.id ? 'selected' : ''}" onclick="selectEntry('${e.id}')">
-            <td><span class="badge ${mClass}">${escapeHtml(e.method)}</span></td>
-            <td style="font-weight:500;" title="${escapeHtml(e.url)}">${escapeHtml(displayPath)}</td>
-            <td><span class="${sClass}">${e.status_code}</span></td>
-            <td>${durationStr} ${slowBadge}</td>
-            <td style="color:var(--text-muted);">${timeStr}</td>
-          </tr>
-        `;
+      <tr class="${classes.join(' ')}" data-id="${escapeHtml(e.id)}">
+        <td><span class="badge ${methodClass(e.method)}">${escapeHtml(e.method)}</span></td>
+        <td class="endpoint-cell endpoint" title="${escapeHtml(e.url)}">
+          ${escapeHtml(e.route || e.path)}
+          ${hasRoute ? `<span class="endpoint-sub">${escapeHtml(e.path)}</span>` : ''}
+        </td>
+        <td><span class="status-pill s-${sc}">${e.status_code}</span></td>
+        <td><div class="dur"><span class="dur-text">${formatDuration(e.duration)}</span>${e.slow ? '<span class="slow-tag">SLOW</span>' : ''}</div></td>
+        <td class="col-time muted" title="${escapeHtml(ts.toISOString())}">${ts.toLocaleTimeString()}</td>
+      </tr>`;
       }).join('');
-
       updatePagination();
     }
 
     function updatePagination() {
-      const pageInfo = document.getElementById('pageInfo');
-      const prevBtn = document.getElementById('prevBtn');
-      const nextBtn = document.getElementById('nextBtn');
-
       const start = allEntries.length > 0 ? offset + 1 : 0;
       const end = offset + allEntries.length;
-      pageInfo.textContent = `Showing ${start}-${end} of ${totalCount}`;
-
-      prevBtn.disabled = offset === 0;
-      nextBtn.disabled = end >= totalCount;
+      $('pageInfo').textContent = `Showing ${start}–${end} of ${totalCount}`;
+      $('prevBtn').disabled = offset === 0;
+      $('nextBtn').disabled = end >= totalCount;
     }
 
     function changePage(delta) {
-      offset += delta * limit;
-      if (offset < 0) offset = 0;
+      offset = Math.max(0, offset + delta * limit);
       fetchEntries();
     }
 
@@ -623,202 +1589,285 @@
       let t2 = 0, t3 = 0, t4 = 0, t5 = 0, slow = 0;
       entries.forEach(e => {
         const sc = getStatusClass(e.status_code);
-        if (sc === '2xx') t2++;
-        else if (sc === '3xx') t3++;
-        else if (sc === '4xx') t4++;
-        else if (sc === '5xx') t5++;
+        if (sc === '2xx') t2++; else if (sc === '3xx') t3++;
+        else if (sc === '4xx') t4++; else if (sc === '5xx') t5++;
         if (e.slow) slow++;
       });
-      document.getElementById('statTotal').textContent = totalCount;
-      document.getElementById('stat2xx').textContent = t2;
-      document.getElementById('stat3xx').textContent = t3;
-      document.getElementById('stat4xx').textContent = t4;
-      document.getElementById('stat5xx').textContent = t5;
-      document.getElementById('statSlow').textContent = slow;
+      $('statTotal').textContent = totalCount;
+      $('stat2xx').textContent = t2;
+      $('stat3xx').textContent = t3;
+      $('stat4xx').textContent = t4;
+      $('stat5xx').textContent = t5;
+      $('statSlow').textContent = slow;
+      renderStatMeters();
     }
 
     function updateStatsIncremental(e) {
-      const totalEl = document.getElementById('statTotal');
-      totalEl.textContent = parseInt(totalEl.textContent || '0', 10) + 1;
+      const bump = (id) => { const el = $(id); el.textContent = (parseInt(el.textContent || '0', 10) || 0) + 1; };
+      bump('statTotal');
       const sc = getStatusClass(e.status_code);
-      if (sc) {
-        const el = document.getElementById('stat' + sc);
-        if (el) el.textContent = parseInt(el.textContent || '0', 10) + 1;
-      }
-      if (e.slow) {
-        const slowEl = document.getElementById('statSlow');
-        slowEl.textContent = parseInt(slowEl.textContent || '0', 10) + 1;
-      }
+      if (sc) bump('stat' + sc);
+      if (e.slow) bump('statSlow');
+      renderStatMeters();
+    }
+
+    function renderStatMeters() {
+      const total = parseInt($('statTotal').textContent, 10) || 0;
+      document.querySelectorAll('.stat-card[data-meter]').forEach(c => {
+        const n = parseInt(c.querySelector('.stat-val').textContent, 10) || 0;
+        const p = total ? Math.min(100, (n / total) * 100) : 0;
+        c.querySelector('.stat-pct').textContent = Math.round(p) + '%';
+        c.querySelector('.stat-meter i').style.width = p + '%';
+        c.classList.toggle('zero', n === 0);
+      });
     }
 
     async function selectEntry(id) {
       let entry = allEntries.find(e => e.id === id);
       if (!entry) {
         try {
-          const res = await fetch(`${basePath}/api/entries/${id}`);
+          const res = await fetch(`${basePath}/api/entries/${encodeURIComponent(id)}`);
           if (res.ok) entry = await res.json();
-        } catch(err) {}
+        } catch (err) { }
       }
       if (!entry) return;
 
       currentEntry = entry;
-      renderTable();
+      document.querySelectorAll('tr.trace-row').forEach(r => r.classList.toggle('selected', r.dataset.id === id));
+      $('detailPanel').classList.add('open');
 
-      const panel = document.getElementById('detailPanel');
-      panel.classList.add('open');
-
-      const dMethod = document.getElementById('dMethod');
-      dMethod.className = `badge badge-${entry.method.toLowerCase()}`;
+      const dMethod = $('dMethod');
+      dMethod.className = `badge ${methodClass(entry.method)}`;
       dMethod.textContent = entry.method;
-      document.getElementById('dPath').textContent = entry.path;
+      $('dPath').textContent = entry.path;
+      $('dPath').title = entry.url || '';
 
-      document.getElementById('oMethod').textContent = entry.method;
-      document.getElementById('oStatus').innerHTML = `<span class="status-${getStatusClass(entry.status_code)}">${entry.status_code}</span>`;
-      document.getElementById('oRoute').textContent = entry.route || entry.path;
-      document.getElementById('oURL').textContent = entry.url;
-      document.getElementById('oDuration').textContent = formatDuration(entry.duration) + (entry.slow ? ' (SLOW)' : '');
-      document.getElementById('oTime').textContent = new Date(entry.timestamp).toISOString();
-      document.getElementById('oReqID').textContent = entry.request_id || '—';
-      document.getElementById('oTraceID').textContent = entry.trace_id || '—';
+      const sc = getStatusClass(entry.status_code) || '0';
+      $('oMethod').textContent = entry.method;
+      $('oStatus').innerHTML = `<span class="status-pill s-${sc}">${entry.status_code}</span>`;
+      $('oRoute').textContent = entry.route || entry.path;
+      $('oURL').textContent = entry.url;
+      $('oDuration').textContent = formatDuration(entry.duration) + (entry.slow ? ' (SLOW)' : '');
+      $('oTime').textContent = new Date(entry.timestamp).toISOString();
 
-      renderHeaders(document.getElementById('reqHeaders'), entry.request?.headers);
-      renderHeaders(document.getElementById('reqQuery'), entry.request?.query);
-      document.getElementById('reqTruncTag').style.display = entry.request?.body_truncated ? 'inline-block' : 'none';
-      renderBody(document.getElementById('reqBody'), entry.request?.body);
+      renderHeaders($('reqHeaders'), entry.request && entry.request.headers);
+      renderHeaders($('reqQuery'), entry.request && entry.request.query);
+      $('reqQuerySection').style.display =
+        entry.request && entry.request.query && Object.keys(entry.request.query).length ? 'block' : 'none';
+      $('reqTruncTag').style.display = entry.request && entry.request.body_truncated ? 'inline-block' : 'none';
+      renderBody($('reqBody'), entry.request && entry.request.body);
 
-      renderHeaders(document.getElementById('resHeaders'), entry.response?.headers);
-      document.getElementById('resTruncTag').style.display = entry.response?.body_truncated ? 'inline-block' : 'none';
-      renderBody(document.getElementById('resBody'), entry.response?.body);
+      renderHeaders($('resHeaders'), entry.response && entry.response.headers);
+      $('resTruncTag').style.display = entry.response && entry.response.body_truncated ? 'inline-block' : 'none';
+      renderBody($('resBody'), entry.response && entry.response.body);
     }
 
     function renderHeaders(container, headers) {
       if (!headers || Object.keys(headers).length === 0) {
-        container.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">None</span>';
+        container.innerHTML = '<span class="none-text">None</span>';
         return;
       }
       let html = '<table class="kv-table">';
       for (const [k, vals] of Object.entries(headers)) {
-        const valStr = Array.isArray(vals) ? vals.join(', ') : vals;
-        html += `<tr><td class="kv-key">${escapeHtml(k)}</td><td class="kv-val">${escapeHtml(valStr)}</td></tr>`;
+        const valStr = Array.isArray(vals) ? vals.join(', ') : String(vals);
+        const red = /redact|\*{3,}/i.test(valStr) ? ' redacted' : '';
+        html += `<tr><td class="kv-key">${escapeHtml(k)}</td><td class="kv-val${red}">${escapeHtml(valStr)}</td></tr>`;
       }
-      html += '</table>';
-      container.innerHTML = html;
+      container.innerHTML = html + '</table>';
     }
 
     function renderBody(codeEl, body) {
-      if (!body) {
-        codeEl.textContent = 'No body content';
-        return;
-      }
+      codeEl.dataset.raw = '';
+      if (!body) { codeEl.innerHTML = '<span class="none-text">No body content</span>'; return; }
       if (body === '[Binary content not displayed]') {
-        codeEl.textContent = 'Binary content not displayed';
+        codeEl.innerHTML = '<span class="none-text">Binary content not displayed</span>';
         return;
       }
       try {
-        const parsed = JSON.parse(body);
-        codeEl.textContent = JSON.stringify(parsed, null, 2);
+        const pretty = JSON.stringify(JSON.parse(body), null, 2);
+        codeEl.dataset.raw = pretty;
+        codeEl.innerHTML = highlightJSON(pretty);
       } catch (e) {
+        codeEl.dataset.raw = body;
         codeEl.textContent = body;
       }
     }
 
+    function highlightJSON(str) {
+      const safe = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return safe.replace(
+        /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        (m) => {
+          let cls = 'j-num';
+          if (m.startsWith('"')) {
+            cls = /:$/.test(m) ? 'j-key' : 'j-str';
+            if (cls === 'j-str' && /redact|\*{3,}/i.test(m)) cls = 'redacted';
+          } else if (m === 'true' || m === 'false') cls = 'j-bool';
+          else if (m === 'null') cls = 'j-null';
+          return `<span class="${cls}">${m}</span>`;
+        });
+    }
+
     function switchTab(tab) {
       ['overview', 'request', 'response'].forEach(t => {
-        const cap = t.charAt(0).toUpperCase() + t.slice(1);
-        document.getElementById('tab' + cap).style.display = (t === tab) ? 'block' : 'none';
+        $('tab' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? 'block' : 'none';
       });
-      document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
-        btn.classList.toggle('active', ['overview', 'request', 'response'][idx] === tab);
-      });
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
     }
 
     function closeDetail() {
-      document.getElementById('detailPanel').classList.remove('open');
+      $('detailPanel').classList.remove('open');
       currentEntry = null;
-      renderTable();
+      document.querySelectorAll('tr.trace-row.selected').forEach(r => r.classList.remove('selected'));
     }
 
-    function filterByStatus(cls) {
-      document.getElementById('statusFilter').value = cls;
-      offset = 0;
-      fetchEntries();
-    }
+    function toggleSlowFilter() { slowOnly = !slowOnly; offset = 0; fetchEntries(); }
+    function filterByStatus(cls) { $('statusFilter').value = cls; offset = 0; fetchEntries(); }
 
-    function toggleSlowFilter() {
-      slowOnly = !slowOnly;
-      const btn = document.getElementById('slowBtn');
-      btn.classList.toggle('btn-active', slowOnly);
-      offset = 0;
-      fetchEntries();
-    }
-
-    function handleSearch() {
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(() => {
-        offset = 0;
-        fetchEntries();
-      }, 300);
-    }
+    function openClear() { $('clearModal').hidden = false; $('clearCancel').focus(); }
+    function closeClear() { $('clearModal').hidden = true; }
 
     async function clearLogs() {
-      if (!confirm('Are you sure you want to clear all stored traces?')) return;
+      closeClear();
       try {
         await fetch(`${basePath}/api/clear`, { method: 'DELETE' });
         offset = 0;
         allEntries = [];
         closeDetail();
         fetchEntries();
-      } catch (err) {}
+        showToast('Traces cleared');
+      } catch (err) { }
     }
 
-    function copyCurl() {
-      if (!currentEntry) return;
+    function copyText(text, msg) {
+      const done = () => showToast(msg || 'Copied to clipboard');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallbackCopy);
+      } else fallbackCopy();
+      function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { }
+        ta.remove();
+      }
+    }
+
+    function buildCurl() {
       const e = currentEntry;
-      let curl = `curl -X ${e.method} '${e.url}'`;
-      
+      let curl = `curl -X ${e.method} '${escapeShell(e.url)}'`;
       if (e.request && e.request.headers) {
         for (const [k, vals] of Object.entries(e.request.headers)) {
-          const valStr = Array.isArray(vals) ? vals.join(', ') : vals;
+          const valStr = Array.isArray(vals) ? vals.join(', ') : String(vals);
           curl += ` \\\n  -H '${escapeShell(k)}: ${escapeShell(valStr)}'`;
         }
       }
-
       if (e.request && e.request.body && e.request.body !== '[Binary content not displayed]') {
         curl += ` \\\n  --data-raw '${escapeShell(e.request.body)}'`;
       }
-
-      navigator.clipboard.writeText(curl).then(() => {
-        const btn = document.getElementById('curlBtn');
-        const orig = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = orig, 1500);
-      });
+      return curl;
     }
 
-    function escapeShell(str) {
-      return str.replace(/'/g, "'\\''");
+    function openCurl() {
+      if (!currentEntry) return;
+      $('curlText').textContent = buildCurl();
+      $('curlCopy').querySelector('span').textContent = 'Copy';
+      $('curlModal').hidden = false;
+      $('curlCopy').focus();
     }
+
+    function closeCurl() { $('curlModal').hidden = true; }
+
+    function showToast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('apiwatch-theme', next); } catch (e) { }
+    }
+
+    function escapeShell(str) { return String(str).replace(/'/g, "'\\''"); }
 
     function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+      if (str == null) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function formatDuration(ns) {
-      if (ns == null) return '0ms';
+      if (ns == null) return '0 ms';
       const ms = ns / 1e6;
-      if (ms < 1) return (ns / 1e3).toFixed(1) + 'µs';
-      if (ms < 1000) return ms.toFixed(1) + 'ms';
-      return (ms / 1000).toFixed(2) + 's';
+      if (ms >= 1000) return Math.round(ms).toLocaleString('en-US') + ' ms';
+      return ms.toFixed(ms < 10 ? 2 : 1) + ' ms';
     }
 
+    $('traceTableBody').addEventListener('click', (ev) => {
+      const tr = ev.target.closest('tr.trace-row');
+      if (tr) selectEntry(tr.dataset.id);
+    });
+    document.querySelectorAll('.stat-card[data-status]').forEach(c =>
+      c.addEventListener('click', () => filterByStatus(c.dataset.status)));
+    $('slowCard').addEventListener('click', toggleSlowFilter);
+    $('slowBtn').addEventListener('click', toggleSlowFilter);
+    $('clearBtn').addEventListener('click', openClear);
+    $('clearCancel').addEventListener('click', closeClear);
+    $('clearConfirm').addEventListener('click', clearLogs);
+    $('clearModal').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) closeClear(); });
+    $('pauseBtn').addEventListener('click', togglePause);
+    $('themeBtn').addEventListener('click', toggleTheme);
+    $('prevBtn').addEventListener('click', () => changePage(-1));
+    $('nextBtn').addEventListener('click', () => changePage(1));
+    $('closeBtn').addEventListener('click', closeDetail);
+    $('curlBtn').addEventListener('click', openCurl);
+    $('curlClose').addEventListener('click', closeCurl);
+    $('curlCancel').addEventListener('click', closeCurl);
+    $('curlModal').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) closeCurl(); });
+    $('curlCopy').addEventListener('click', () => {
+      copyText($('curlText').textContent, 'cURL command copied');
+      const label = $('curlCopy').querySelector('span');
+      label.textContent = 'Copied!';
+      setTimeout(() => { label.textContent = 'Copy'; }, 1500);
+    });
+    $('statusFilter').addEventListener('change', () => { offset = 0; fetchEntries(); });
+    $('methodFilter').addEventListener('change', (ev) => { methodFilter = ev.target.value; offset = 0; fetchEntries(); });
+    $('searchInput').addEventListener('input', () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => { offset = 0; fetchEntries(); }, 300);
+    });
+    document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+    document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
+      const raw = $(b.dataset.copy).dataset.raw;
+      if (raw) copyText(raw, 'Body copied');
+    }));
+
+    document.addEventListener('keydown', (ev) => {
+      if (!$('clearModal').hidden) { if (ev.key === 'Escape') closeClear(); return; }
+      if (!$('curlModal').hidden) { if (ev.key === 'Escape') closeCurl(); return; }
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      const typing = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+      if (ev.key === '/' && !typing) { ev.preventDefault(); $('searchInput').focus(); return; }
+      if (ev.key === 'Escape') { if (typing) document.activeElement.blur(); else closeDetail(); return; }
+      if (typing || !allEntries.length) return;
+      if (['ArrowDown', 'ArrowUp', 'j', 'k'].includes(ev.key)) {
+        ev.preventDefault();
+        const idx = currentEntry ? allEntries.findIndex(e => e.id === currentEntry.id) : -1;
+        const down = ev.key === 'ArrowDown' || ev.key === 'j';
+        const next = Math.min(allEntries.length - 1, Math.max(0, idx + (down ? 1 : -1)));
+        selectEntry(allEntries[next].id);
+        const row = document.querySelector(`tr.trace-row[data-id="${CSS.escape(allEntries[next].id)}"]`);
+        if (row) row.scrollIntoView({ block: 'nearest' });
+      }
+    });
+
+    syncFilterUI();
     fetchEntries();
     connectSSE();
   </script>
 </body>
+
 </html>

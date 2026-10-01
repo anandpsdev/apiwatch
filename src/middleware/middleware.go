@@ -43,6 +43,45 @@ func IsExcluded(path string, excluded []string) bool {
 	return false
 }
 
+func FullURL(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+
+	scheme := "http"
+	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		scheme = "https"
+	}
+
+	host := r.Host
+	if fwdHost := r.Header.Get("X-Forwarded-Host"); fwdHost != "" {
+		host = fwdHost
+	} else if host == "" && r.URL != nil {
+		host = r.URL.Host
+	}
+
+	uri := ""
+	if r.URL != nil {
+		uri = r.URL.RequestURI()
+	}
+	if uri == "" {
+		if r.RequestURI != "" {
+			uri = r.RequestURI
+		} else if r.URL != nil {
+			uri = r.URL.Path
+			if r.URL.RawQuery != "" {
+				uri += "?" + r.URL.RawQuery
+			}
+		}
+	}
+
+	if host != "" {
+		return scheme + "://" + host + uri
+	}
+
+	return uri
+}
+
 func HTTPMiddleware(st store.Store, br *stream.Broker, cfg config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +116,7 @@ func HTTPMiddleware(st store.Store, br *stream.Broker, cfg config.Config) func(h
 				Timestamp:  start,
 				Method:     r.Method,
 				Path:       r.URL.Path,
-				URL:        r.URL.RequestURI(),
+				URL:        FullURL(r),
 				Route:      route,
 				StatusCode: rec.StatusCode(),
 				Duration:   duration,

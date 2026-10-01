@@ -115,7 +115,7 @@ func GinMiddleware(st store.Store, br *stream.Broker, cfg config.Config) gin.Han
 			Timestamp:  start,
 			Method:     c.Request.Method,
 			Path:       c.Request.URL.Path,
-			URL:        c.Request.URL.RequestURI(),
+			URL:        FullURL(c.Request),
 			Route:      route,
 			StatusCode: c.Writer.Status(),
 			Duration:   duration,
