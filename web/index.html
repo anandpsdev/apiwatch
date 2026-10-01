@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APIWatch — Runtime API Traffic Inspector</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --hover-bg: #273548;
+      --active-bg: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #6366f1;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+    
+    /* Header */
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #38bdf8;
+    }
+    .brand .subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 400;
+      border-left: 1px solid var(--card-border);
+      padding-left: 12px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+    .status-dot.live {
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      padding: 16px 24px;
+      background: var(--bg);
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .stat-card:hover { background: var(--hover-bg); }
+    .stat-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+    .stat-val { font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+    /* Toolbar */
+    .toolbar {
+      padding: 0 24px 16px 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    select, button {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      outline: none;
+    }
+    button:hover { background: var(--hover-bg); }
+    .btn-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+    .btn-danger:hover { background: rgba(239, 68, 68, 0.15); }
+    .btn-active { background: var(--primary); color: #0f172a; font-weight: 600; border-color: var(--primary); }
+
+    /* Main Container */
+    .main-layout {
+      display: flex;
+      padding: 0 24px 24px 24px;
+      gap: 16px;
+      height: calc(100vh - 210px);
+      min-height: 400px;
+    }
+    .table-container {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #192233;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      z-index: 2;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+      white-space: nowrap;
+    }
+    tr.trace-row {
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    tr.trace-row:hover { background: var(--hover-bg); }
+    tr.trace-row.selected { background: var(--active-bg); }
+
+    /* Method Badges */
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      text-align: center;
+    }
+    .badge-get { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .badge-post { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .badge-put { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .badge-patch { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+    .badge-delete { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    
+    .status-2xx { color: var(--success); font-weight: 600; }
+    .status-3xx { color: var(--info); font-weight: 600; }
+    .status-4xx { color: var(--warning); font-weight: 600; }
+    .status-5xx { color: var(--danger); font-weight: 600; }
+    
+    .slow-tag {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+
+    /* Detail Drawer / Panel */
+    .detail-panel {
+      width: 480px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .detail-panel.open { display: flex; }
+    .detail-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #192233;
+    }
+    .detail-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--card-border);
+      background: #141c2c;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(56, 189, 248, 0.05);
+    }
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .detail-section {
+      margin-bottom: 16px;
+    }
+    .detail-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .kv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    .kv-table td {
+      padding: 6px 8px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    .kv-key { color: var(--text-muted); width: 35%; font-weight: 500; }
+    .kv-val { color: var(--text); word-break: break-all; }
+    .code-box {
+      background: #0b1120;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 350px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .redacted { color: #f43f5e; font-weight: 600; }
+    .tag-trunc {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      margin-left: 8px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-top: 1px solid var(--card-border);
+      background: #192233;
+    }
+    .empty-state {
+      padding: 48px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h1>APIWatch</h1>
+      <span class="subtitle">Runtime API Traffic Inspector</span>
+    </div>
+    <div class="status-badge">
+      <div id="statusDot" class="status-dot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-card" onclick="filterByStatus('')">
+      <div class="stat-label">Total</div>
+      <div class="stat-val" id="statTotal">0</div>
+    </div>
+    <div class="stat-card" onclick="filterByStatus('2xx')">
+      <div class="stat-label" style="color:#10b981;">2xx</div>
+      <div class="stat-val status-2xx" id="stat2xx">0</div>
+    </div>
+    <div class="stat-card" onclick="filterByStatus('3xx')">
+      <div class="stat-label" style="color:#6366f1;">3xx</div>
+      <div class="stat-val status-3xx" id="stat3xx">0</div>
+    </div>
+    <div class="stat-card" onclick="filterByStatus('4xx')">
+      <div class="stat-label" style="color:#f59e0b;">4xx</div>
+      <div class="stat-val status-4xx" id="stat4xx">0</div>
+    </div>
+    <div class="stat-card" onclick="filterByStatus('5xx')">
+      <div class="stat-label" style="color:#ef4444;">5xx</div>
+      <div class="stat-val status-5xx" id="stat5xx">0</div>
+    </div>
+    <div class="stat-card" onclick="toggleSlowFilter()">
+      <div class="stat-label" style="color:#fbbf24;">Slow</div>
+      <div class="stat-val" style="color:#fbbf24;" id="statSlow">0</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="searchInput" class="search-input" placeholder="Search path, method, URL, or route..." oninput="handleSearch()">
+    
+    <select id="methodFilter" onchange="fetchEntries()">
+      <option value="">All Methods</option>
+      <option value="GET">GET</option>
+      <option value="POST">POST</option>
+      <option value="PUT">PUT</option>
+      <option value="PATCH">PATCH</option>
+      <option value="DELETE">DELETE</option>
+    </select>
+
+    <select id="statusFilter" onchange="fetchEntries()">
+      <option value="">All Statuses</option>
+      <option value="2xx">2xx Success</option>
+      <option value="3xx">3xx Redirect</option>
+      <option value="4xx">4xx Client Error</option>
+      <option value="5xx">5xx Server Error</option>
+    </select>
+
+    <button id="slowBtn" onclick="toggleSlowFilter()">Slow Requests</button>
+    <button class="btn-danger" onclick="clearLogs()">Clear</button>
+  </div>
+
+  <div class="main-layout">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:90px;">Method</th>
+            <th>Endpoint</th>
+            <th style="width:90px;">Status</th>
+            <th style="width:110px;">Duration</th>
+            <th style="width:140px;">Time</th>
+          </tr>
+        </thead>
+        <tbody id="traceTableBody">
+          <tr><td colspan="5" class="empty-state">No traces captured yet. Send requests to observe traffic.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <span id="pageInfo" style="color:var(--text-muted);">Showing 0-0 of 0</span>
+        <div style="display:flex; gap:8px;">
+          <button id="prevBtn" onclick="changePage(-1)" disabled>Previous</button>
+          <button id="nextBtn" onclick="changePage(1)" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Drawer Panel -->
+    <div id="detailPanel" class="detail-panel">
+      <div class="detail-header">
+        <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+          <span id="dMethod" class="badge"></span>
+          <span id="dPath" style="font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;"></span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="curlBtn" onclick="copyCurl()" title="Copy as cURL" style="padding:4px 8px; font-size:11px;">Copy cURL</button>
+          <button onclick="closeDetail()" style="padding:4px 8px; font-size:11px;">✕</button>
+        </div>
+      </div>
+
+      <div class="detail-tabs">
+        <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+        <button class="tab-btn" onclick="switchTab('request')">Request</button>
+        <button class="tab-btn" onclick="switchTab('response')">Response</button>
+      </div>
+
+      <div class="detail-body">
+        <!-- Overview Tab -->
+        <div id="tabOverview">
+          <div class="detail-section">
+            <div class="detail-title">Request Information</div>
+            <table class="kv-table">
+              <tr><td class="kv-key">Method</td><td id="oMethod" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Status</td><td id="oStatus" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Route</td><td id="oRoute" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Full URL</td><td id="oURL" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Duration</td><td id="oDuration" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Timestamp</td><td id="oTime" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Request ID</td><td id="oReqID" class="kv-val"></td></tr>
+              <tr><td class="kv-key">Trace ID</td><td id="oTraceID" class="kv-val"></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Request Tab -->
+        <div id="tabRequest" style="display:none;">
+          <div class="detail-section">
+            <div class="detail-title">Headers</div>
+            <div id="reqHeaders"></div>
+          </div>
+          <div class="detail-section" id="reqQuerySection">
+            <div class="detail-title">Query Parameters</div>
+            <div id="reqQuery"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-title" style="display:flex; align-items:center;">
+              Body
+              <span id="reqTruncTag" class="tag-trunc" style="display:none;">TRUNCATED</span>
+            </div>
+            <pre class="code-box"><code id="reqBody"></code></pre>
+          </div>
+        </div>
+
+        <!-- Response Tab -->
+        <div id="tabResponse" style="display:none;">
+          <div class="detail-section">
+            <div class="detail-title">Headers</div>
+            <div id="resHeaders"></div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-title" style="display:flex; align-items:center;">
+              Body
+              <span id="resTruncTag" class="tag-trunc" style="display:none;">TRUNCATED</span>
+            </div>
+            <pre class="code-box"><code id="resBody"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const basePath = window.location.pathname.replace(/\/+$/, '');
+    let allEntries = [];
+    let currentEntry = null;
+    let offset = 0;
+    const limit = 50;
+    let totalCount = 0;
+    let searchDebounce = null;
+    let slowOnly = false;
+
+    function connectSSE() {
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      const evtSource = new EventSource(basePath + '/api/events');
+
+      evtSource.onopen = () => {
+        dot.className = 'status-dot live';
+        txt.textContent = 'Live';
+      };
+
+      evtSource.onmessage = (e) => {
+        try {
+          const entry = JSON.parse(e.data);
+          updateStatsIncremental(entry);
+          
+          if (offset === 0 && matchesCurrentFilters(entry)) {
+            allEntries.unshift(entry);
+            if (allEntries.length > limit) allEntries.pop();
+            totalCount++;
+            renderTable();
+          }
+        } catch(err) {}
+      };
+
+      evtSource.onerror = () => {
+        dot.className = 'status-dot';
+        txt.textContent = 'Disconnected';
+      };
+    }
+
+    function matchesCurrentFilters(e) {
+      const m = document.getElementById('methodFilter').value;
+      if (m && e.method.toUpperCase() !== m.toUpperCase()) return false;
+      const st = document.getElementById('statusFilter').value;
+      if (st && getStatusClass(e.status_code) !== st) return false;
+      if (slowOnly && !e.slow) return false;
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      if (q) {
+        if (!e.path.toLowerCase().includes(q) &&
+            !e.method.toLowerCase().includes(q) &&
+            !(e.route && e.route.toLowerCase().includes(q))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function getStatusClass(code) {
+      if (code >= 200 && code < 300) return '2xx';
+      if (code >= 300 && code < 400) return '3xx';
+      if (code >= 400 && code < 500) return '4xx';
+      if (code >= 500 && code < 600) return '5xx';
+      return '';
+    }
+
+    async function fetchEntries() {
+      const params = new URLSearchParams();
+      params.set('limit', limit);
+      params.set('offset', offset);
+
+      const m = document.getElementById('methodFilter').value;
+      if (m) params.set('method', m);
+
+      const st = document.getElementById('statusFilter').value;
+      if (st) params.set('status_class', st);
+
+      if (slowOnly) params.set('slow', 'true');
+
+      const q = document.getElementById('searchInput').value.trim();
+      if (q) params.set('search', q);
+
+      try {
+        const res = await fetch(`${basePath}/api/entries?${params.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        allEntries = data.items || [];
+        totalCount = data.total || 0;
+        renderTable();
+        computeStats(allEntries);
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('traceTableBody');
+      if (allEntries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No matching traces found.</td></tr>';
+        updatePagination();
+        return;
+      }
+
+      tbody.innerHTML = allEntries.map(e => {
+        const mClass = `badge-${e.method.toLowerCase()}`;
+        const sClass = `status-${getStatusClass(e.status_code)}`;
+        const durationStr = formatDuration(e.duration);
+        const slowBadge = e.slow ? '<span class="slow-tag">SLOW</span>' : '';
+        const timeStr = new Date(e.timestamp).toLocaleTimeString();
+        const displayPath = e.route || e.path;
+
+        return `
+          <tr class="trace-row ${currentEntry && currentEntry.id === e.id ? 'selected' : ''}" onclick="selectEntry('${e.id}')">
+            <td><span class="badge ${mClass}">${escapeHtml(e.method)}</span></td>
+            <td style="font-weight:500;" title="${escapeHtml(e.url)}">${escapeHtml(displayPath)}</td>
+            <td><span class="${sClass}">${e.status_code}</span></td>
+            <td>${durationStr} ${slowBadge}</td>
+            <td style="color:var(--text-muted);">${timeStr}</td>
+          </tr>
+        `;
+      }).join('');
+
+      updatePagination();
+    }
+
+    function updatePagination() {
+      const pageInfo = document.getElementById('pageInfo');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+
+      const start = allEntries.length > 0 ? offset + 1 : 0;
+      const end = offset + allEntries.length;
+      pageInfo.textContent = `Showing ${start}-${end} of ${totalCount}`;
+
+      prevBtn.disabled = offset === 0;
+      nextBtn.disabled = end >= totalCount;
+    }
+
+    function changePage(delta) {
+      offset += delta * limit;
+      if (offset < 0) offset = 0;
+      fetchEntries();
+    }
+
+    function computeStats(entries) {
+      let t2 = 0, t3 = 0, t4 = 0, t5 = 0, slow = 0;
+      entries.forEach(e => {
+        const sc = getStatusClass(e.status_code);
+        if (sc === '2xx') t2++;
+        else if (sc === '3xx') t3++;
+        else if (sc === '4xx') t4++;
+        else if (sc === '5xx') t5++;
+        if (e.slow) slow++;
+      });
+      document.getElementById('statTotal').textContent = totalCount;
+      document.getElementById('stat2xx').textContent = t2;
+      document.getElementById('stat3xx').textContent = t3;
+      document.getElementById('stat4xx').textContent = t4;
+      document.getElementById('stat5xx').textContent = t5;
+      document.getElementById('statSlow').textContent = slow;
+    }
+
+    function updateStatsIncremental(e) {
+      const totalEl = document.getElementById('statTotal');
+      totalEl.textContent = parseInt(totalEl.textContent || '0', 10) + 1;
+      const sc = getStatusClass(e.status_code);
+      if (sc) {
+        const el = document.getElementById('stat' + sc);
+        if (el) el.textContent = parseInt(el.textContent || '0', 10) + 1;
+      }
+      if (e.slow) {
+        const slowEl = document.getElementById('statSlow');
+        slowEl.textContent = parseInt(slowEl.textContent || '0', 10) + 1;
+      }
+    }
+
+    async function selectEntry(id) {
+      let entry = allEntries.find(e => e.id === id);
+      if (!entry) {
+        try {
+          const res = await fetch(`${basePath}/api/entries/${id}`);
+          if (res.ok) entry = await res.json();
+        } catch(err) {}
+      }
+      if (!entry) return;
+
+      currentEntry = entry;
+      renderTable();
+
+      const panel = document.getElementById('detailPanel');
+      panel.classList.add('open');
+
+      const dMethod = document.getElementById('dMethod');
+      dMethod.className = `badge badge-${entry.method.toLowerCase()}`;
+      dMethod.textContent = entry.method;
+      document.getElementById('dPath').textContent = entry.path;
+
+      document.getElementById('oMethod').textContent = entry.method;
+      document.getElementById('oStatus').innerHTML = `<span class="status-${getStatusClass(entry.status_code)}">${entry.status_code}</span>`;
+      document.getElementById('oRoute').textContent = entry.route || entry.path;
+      document.getElementById('oURL').textContent = entry.url;
+      document.getElementById('oDuration').textContent = formatDuration(entry.duration) + (entry.slow ? ' (SLOW)' : '');
+      document.getElementById('oTime').textContent = new Date(entry.timestamp).toISOString();
+      document.getElementById('oReqID').textContent = entry.request_id || '—';
+      document.getElementById('oTraceID').textContent = entry.trace_id || '—';
+
+      renderHeaders(document.getElementById('reqHeaders'), entry.request?.headers);
+      renderHeaders(document.getElementById('reqQuery'), entry.request?.query);
+      document.getElementById('reqTruncTag').style.display = entry.request?.body_truncated ? 'inline-block' : 'none';
+      renderBody(document.getElementById('reqBody'), entry.request?.body);
+
+      renderHeaders(document.getElementById('resHeaders'), entry.response?.headers);
+      document.getElementById('resTruncTag').style.display = entry.response?.body_truncated ? 'inline-block' : 'none';
+      renderBody(document.getElementById('resBody'), entry.response?.body);
+    }
+
+    function renderHeaders(container, headers) {
+      if (!headers || Object.keys(headers).length === 0) {
+        container.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">None</span>';
+        return;
+      }
+      let html = '<table class="kv-table">';
+      for (const [k, vals] of Object.entries(headers)) {
+        const valStr = Array.isArray(vals) ? vals.join(', ') : vals;
+        html += `<tr><td class="kv-key">${escapeHtml(k)}</td><td class="kv-val">${escapeHtml(valStr)}</td></tr>`;
+      }
+      html += '</table>';
+      container.innerHTML = html;
+    }
+
+    function renderBody(codeEl, body) {
+      if (!body) {
+        codeEl.textContent = 'No body content';
+        return;
+      }
+      if (body === '[Binary content not displayed]') {
+        codeEl.textContent = 'Binary content not displayed';
+        return;
+      }
+      try {
+        const parsed = JSON.parse(body);
+        codeEl.textContent = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        codeEl.textContent = body;
+      }
+    }
+
+    function switchTab(tab) {
+      ['overview', 'request', 'response'].forEach(t => {
+        const cap = t.charAt(0).toUpperCase() + t.slice(1);
+        document.getElementById('tab' + cap).style.display = (t === tab) ? 'block' : 'none';
+      });
+      document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', ['overview', 'request', 'response'][idx] === tab);
+      });
+    }
+
+    function closeDetail() {
+      document.getElementById('detailPanel').classList.remove('open');
+      currentEntry = null;
+      renderTable();
+    }
+
+    function filterByStatus(cls) {
+      document.getElementById('statusFilter').value = cls;
+      offset = 0;
+      fetchEntries();
+    }
+
+    function toggleSlowFilter() {
+      slowOnly = !slowOnly;
+      const btn = document.getElementById('slowBtn');
+      btn.classList.toggle('btn-active', slowOnly);
+      offset = 0;
+      fetchEntries();
+    }
+
+    function handleSearch() {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        offset = 0;
+        fetchEntries();
+      }, 300);
+    }
+
+    async function clearLogs() {
+      if (!confirm('Are you sure you want to clear all stored traces?')) return;
+      try {
+        await fetch(`${basePath}/api/clear`, { method: 'DELETE' });
+        offset = 0;
+        allEntries = [];
+        closeDetail();
+        fetchEntries();
+      } catch (err) {}
+    }
+
+    function copyCurl() {
+      if (!currentEntry) return;
+      const e = currentEntry;
+      let curl = `curl -X ${e.method} '${e.url}'`;
+      
+      if (e.request && e.request.headers) {
+        for (const [k, vals] of Object.entries(e.request.headers)) {
+          const valStr = Array.isArray(vals) ? vals.join(', ') : vals;
+          curl += ` \\\n  -H '${escapeShell(k)}: ${escapeShell(valStr)}'`;
+        }
+      }
+
+      if (e.request && e.request.body && e.request.body !== '[Binary content not displayed]') {
+        curl += ` \\\n  --data-raw '${escapeShell(e.request.body)}'`;
+      }
+
+      navigator.clipboard.writeText(curl).then(() => {
+        const btn = document.getElementById('curlBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
+    function escapeShell(str) {
+      return str.replace(/'/g, "'\\''");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDuration(ns) {
+      if (ns == null) return '0ms';
+      const ms = ns / 1e6;
+      if (ms < 1) return (ns / 1e3).toFixed(1) + 'µs';
+      if (ms < 1000) return ms.toFixed(1) + 'ms';
+      return (ms / 1000).toFixed(2) + 's';
+    }
+
+    fetchEntries();
+    connectSSE();
+  </script>
+</body>
+</html>
