@@ -22,7 +22,7 @@ func RedactHeaders(headers http.Header, redactList []string) map[string][]string
 	for k, vals := range headers {
 		lowerKey := strings.ToLower(k)
 		if _, shouldRedact := redactMap[lowerKey]; shouldRedact {
-			result[k] = []string{"[REDACTED]"}
+			result[k] = []string{"*****"}
 		} else {
 			copiedVals := make([]string, len(vals))
 			copy(copiedVals, vals)
@@ -74,7 +74,7 @@ func redactJSON(data any, redactFields map[string]struct{}) any {
 		newMap := make(map[string]any, len(v))
 		for k, val := range v {
 			if _, shouldRedact := redactFields[strings.ToLower(k)]; shouldRedact {
-				newMap[k] = "[REDACTED]"
+				newMap[k] = "*****"
 			} else {
 				newMap[k] = redactJSON(val, redactFields)
 			}
